@@ -77,13 +77,24 @@ const saveProgress = async (userId: string, aulaId: string, progress: number, pe
     throw new Error('Aula não encontrada');
   }
 
-  // Verifique se já existe um progresso para esse usuário
-  const progressoUsuario = aula.progressPorUsuario.find((progress) => progress.userId.toString() === userId);
+  // Verificar se existem progressos antigos
+  if (aula.progressPorUsuario.length > 0) {
+    // Pegar o último progresso
+    const ultimoProgresso = aula.progressPorUsuario[aula.progressPorUsuario.length - 1];
 
-  if (progressoUsuario) {
-    // Atualize o progresso existente
-    progressoUsuario.progress = progress;
-    progressoUsuario.performance = performance;
+    // Verificar se o último progresso ou a performance são diferentes
+    if (ultimoProgresso.progress !== progress || ultimoProgresso.performance !== performance) {
+      // Remover todos os progressos antigos
+      aula.progressPorUsuario.forEach(element => {
+        if (element.userId.toString() === userId.toString()) {
+          element.remove();
+        }
+      });
+      
+      // Adicionar o novo progresso
+      aula.progressPorUsuario.push({ userId, progress, performance });
+    }
+    // Se forem iguais, não faz nada
   } else {
     // Crie um novo progresso para o usuário
     aula.progressPorUsuario.push({ userId, progress, performance });
@@ -92,6 +103,10 @@ const saveProgress = async (userId: string, aulaId: string, progress: number, pe
   await aula.save();
   return aula;
 };
+
+
+
+
 
 export { createAula, deleteAula, getAula, listAulas, updateAula, saveProgress };
 

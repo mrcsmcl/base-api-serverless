@@ -886,7 +886,7 @@ var updateAula = function (data) { return __awaiter(void 0, void 0, void 0, func
 }); };
 exports.updateAula = updateAula;
 var saveProgress = function (userId, aulaId, progress, performance) { return __awaiter(void 0, void 0, void 0, function () {
-    var aula, progressoUsuario;
+    var aula, ultimoProgresso;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, aulaModel_1.Aula.findById(aulaId)];
@@ -895,11 +895,21 @@ var saveProgress = function (userId, aulaId, progress, performance) { return __a
                 if (!aula) {
                     throw new Error('Aula não encontrada');
                 }
-                progressoUsuario = aula.progressPorUsuario.find(function (progress) { return progress.userId.toString() === userId; });
-                if (progressoUsuario) {
-                    // Atualize o progresso existente
-                    progressoUsuario.progress = progress;
-                    progressoUsuario.performance = performance;
+                // Verificar se existem progressos antigos
+                if (aula.progressPorUsuario.length > 0) {
+                    ultimoProgresso = aula.progressPorUsuario[aula.progressPorUsuario.length - 1];
+                    // Verificar se o último progresso ou a performance são diferentes
+                    if (ultimoProgresso.progress !== progress || ultimoProgresso.performance !== performance) {
+                        // Remover todos os progressos antigos
+                        aula.progressPorUsuario.forEach(function (element) {
+                            if (element.userId.toString() === userId.toString()) {
+                                element.remove();
+                            }
+                        });
+                        // Adicionar o novo progresso
+                        aula.progressPorUsuario.push({ userId: userId, progress: progress, performance: performance });
+                    }
+                    // Se forem iguais, não faz nada
                 }
                 else {
                     // Crie um novo progresso para o usuário
@@ -1278,7 +1288,7 @@ var saveProgressHandler = function (_a) {
                 case 1:
                     aulaAtual = _b.sent();
                     // Verifique se a aula não é nula e se já está finalizada
-                    if (aulaAtual !== null && aulaAtual.progressPorUsuario.some(function (progress) { return progress.progress === 100; })) {
+                    if (aulaAtual !== null && progress === 100) {
                         throw new Error('Aula já finalizada, não é possível atualizar o progresso.');
                     }
                     return [4 /*yield*/, (0, aulaService_1.saveProgress)(user._id, aulaId, progress, performance)];
