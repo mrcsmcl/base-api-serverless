@@ -885,8 +885,8 @@ var updateAula = function (data) { return __awaiter(void 0, void 0, void 0, func
     });
 }); };
 exports.updateAula = updateAula;
-var saveProgress = function (aulaId, progress, performance) { return __awaiter(void 0, void 0, void 0, function () {
-    var aula;
+var saveProgress = function (userId, aulaId, progress, performance) { return __awaiter(void 0, void 0, void 0, function () {
+    var aula, progressoUsuario;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, aulaModel_1.Aula.findById(aulaId)];
@@ -895,8 +895,16 @@ var saveProgress = function (aulaId, progress, performance) { return __awaiter(v
                 if (!aula) {
                     throw new Error('Aula não encontrada');
                 }
-                aula.progress = progress;
-                aula.performance = performance;
+                progressoUsuario = aula.progressPorUsuario.find(function (progress) { return progress.userId.toString() === userId; });
+                if (progressoUsuario) {
+                    // Atualize o progresso existente
+                    progressoUsuario.progress = progress;
+                    progressoUsuario.performance = performance;
+                }
+                else {
+                    // Crie um novo progresso para o usuário
+                    aula.progressPorUsuario.push({ userId: userId, progress: progress, performance: performance });
+                }
                 return [4 /*yield*/, aula.save()];
             case 2:
                 _a.sent();
@@ -1253,7 +1261,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.saveProgressHandler = void 0;
 var aulaService_1 = __webpack_require__(/*! ./aulaService */ "./src/handlers/aulas/aulaService.ts");
 var saveProgressHandler = function (_a) {
-    var pathParameters = _a.pathParameters, body = _a.body;
+    var pathParameters = _a.pathParameters, body = _a.body, user = _a.user;
     return __awaiter(void 0, void 0, void 0, function () {
         var aulaId, progress, performance, aulaAtual, aula, error_1;
         return __generator(this, function (_b) {
@@ -1270,10 +1278,10 @@ var saveProgressHandler = function (_a) {
                 case 1:
                     aulaAtual = _b.sent();
                     // Verifique se a aula não é nula e se já está finalizada
-                    if (aulaAtual !== null && aulaAtual.progress === 100) {
+                    if (aulaAtual !== null && aulaAtual.progressPorUsuario.some(function (progress) { return progress.progress === 100; })) {
                         throw new Error('Aula já finalizada, não é possível atualizar o progresso.');
                     }
-                    return [4 /*yield*/, (0, aulaService_1.saveProgress)(aulaId, progress, performance)];
+                    return [4 /*yield*/, (0, aulaService_1.saveProgress)(user._id, aulaId, progress, performance)];
                 case 2:
                     aula = _b.sent();
                     return [2 /*return*/, { aula: aula }];
@@ -1544,7 +1552,27 @@ exports.userService = userService;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Aula = void 0;
+// aulaModel.ts
 var mongoose_1 = __webpack_require__(/*! mongoose */ "mongoose");
+var progressSchema = new mongoose_1.Schema({
+    userId: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+    },
+    progress: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 100,
+    },
+    performance: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 100,
+    },
+});
 var aulaSchema = new mongoose_1.Schema({
     titulo: {
         type: String,
@@ -1564,43 +1592,9 @@ var aulaSchema = new mongoose_1.Schema({
     urlArquivoComplementar: {
         type: String,
     },
-    progress: {
-        type: Number,
-        default: 0,
-        min: 0,
-        max: 100,
-    },
-    performance: {
-        type: Number,
-        default: 0,
-        min: 0,
-        max: 100,
-    },
+    progressPorUsuario: [progressSchema], // Adicione um array para armazenar o progresso por usuário
 });
 exports.Aula = (0, mongoose_1.model)('Aula', aulaSchema);
-// // aulaModel.ts
-// import { Schema, model } from 'mongoose';
-// const aulaSchema = new Schema({
-//   titulo: {
-//     type: String,
-//     required: [true, 'Título é obrigatório'],
-//   },
-//   descricao: {
-//     type: String,
-//   },
-//   urlCapa: {
-//     type: String,
-//     required: [true, 'URL da capa é obrigatória'],
-//   },
-//   urlVideo: {
-//     type: String,
-//     required: [true, 'URL do vídeo é obrigatória'],
-//   },
-//   urlArquivoComplementar: {
-//     type: String,
-//   },
-// });
-// export const Aula = model('Aula', aulaSchema);
 
 
 /***/ }),

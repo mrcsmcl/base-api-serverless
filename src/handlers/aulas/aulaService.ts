@@ -1,6 +1,6 @@
 import { saveProgressHandler } from './saveProgress';  // Importe o novo handler
 import { auth } from '@/lib/auth';  // Importe o módulo de autenticação
-
+import mongoose from 'mongoose';
 import { buildRouter, buildHandler } from '@/lib/router';
 import { createAulaHandler } from './createAula';
 import { deleteAulaHandler } from './deleteAula';
@@ -70,15 +70,24 @@ const updateAula = async (data: IUpdateAula) => {
   return aulaAtualizada;
 };
 
-const saveProgress = async (aulaId: string, progress: number, performance: number) => {
+const saveProgress = async (userId: string, aulaId: string, progress: number, performance: number) => {
   const aula = await Aula.findById(aulaId);
 
   if (!aula) {
     throw new Error('Aula não encontrada');
   }
 
-  aula.progress = progress;
-  aula.performance = performance;
+  // Verifique se já existe um progresso para esse usuário
+  const progressoUsuario = aula.progressPorUsuario.find((progress) => progress.userId.toString() === userId);
+
+  if (progressoUsuario) {
+    // Atualize o progresso existente
+    progressoUsuario.progress = progress;
+    progressoUsuario.performance = performance;
+  } else {
+    // Crie um novo progresso para o usuário
+    aula.progressPorUsuario.push({ userId, progress, performance });
+  }
 
   await aula.save();
   return aula;
