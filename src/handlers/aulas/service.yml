@@ -1,0 +1,16 @@
+handler: src/handlers/aulas/handler.main
+package:
+    individually: true
+events:
+  - http:
+      path: /aulas
+      method: post
+      cors: true
+  - http:
+      path: /aulas/{proxy+}
+      method: any
+      cors: true
+  - http:
+      path: /aulas/{aulaId}/mine
+      method: post
+      cors: true
