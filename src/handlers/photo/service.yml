@@ -1,0 +1,9 @@
+# src/handlers/photo/service.yml
+handler: src/handlers/photo/handler.main
+package:
+  individually: true
+events:
+  - http:
+      path: /contents/photos
+      method: get
+      cors: true

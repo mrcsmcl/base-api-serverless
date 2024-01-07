@@ -734,10 +734,10 @@ exports.config = config;
 
 /***/ }),
 
-/***/ "./src/handlers/healthCheck/getHealthCheck.ts":
-/*!****************************************************!*\
-  !*** ./src/handlers/healthCheck/getHealthCheck.ts ***!
-  \****************************************************/
+/***/ "./src/handlers/photo/getPhotos.ts":
+/*!*****************************************!*\
+  !*** ./src/handlers/photo/getPhotos.ts ***!
+  \*****************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -778,28 +778,42 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getHealthCheck = void 0;
-var healthCheckService_1 = __webpack_require__(/*! @/handlers/healthCheck/healthCheckService */ "./src/handlers/healthCheck/healthCheckService.ts");
-var getHealthCheck = function () { return __awaiter(void 0, void 0, void 0, function () {
-    var healthCheck;
+exports.getPhotos = void 0;
+// src/handlers/photo/getPhotos.ts
+var photoService_1 = __webpack_require__(/*! ./photoService */ "./src/handlers/photo/photoService.ts");
+var getPhotos = function (request, h) { return __awaiter(void 0, void 0, void 0, function () {
+    var search, photos, error_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, healthCheckService_1.getHealthService.getApplicationHealth()];
+            case 0:
+                search = request.query.search;
+                if (!search) {
+                    return [2 /*return*/, { error: 'O parâmetro de pesquisa é obrigatório' }];
+                }
+                _a.label = 1;
             case 1:
-                healthCheck = _a.sent();
-                return [2 /*return*/, healthCheck];
+                _a.trys.push([1, 3, , 4]);
+                return [4 /*yield*/, (0, photoService_1.fetchPhotos)(search)];
+            case 2:
+                photos = _a.sent();
+                return [2 /*return*/, { photos: photos }];
+            case 3:
+                error_1 = _a.sent();
+                console.error('Erro ao buscar fotos:', error_1);
+                return [2 /*return*/, { error: 'Erro ao buscar fotos' }];
+            case 4: return [2 /*return*/];
         }
     });
 }); };
-exports.getHealthCheck = getHealthCheck;
+exports.getPhotos = getPhotos;
 
 
 /***/ }),
 
-/***/ "./src/handlers/healthCheck/healthCheckService.ts":
-/*!********************************************************!*\
-  !*** ./src/handlers/healthCheck/healthCheckService.ts ***!
-  \********************************************************/
+/***/ "./src/handlers/photo/photoService.ts":
+/*!********************************************!*\
+  !*** ./src/handlers/photo/photoService.ts ***!
+  \********************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -839,49 +853,104 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getHealthService = void 0;
-var package_1 = __webpack_require__(/*! @/package */ "./package.json");
-var mongoose_1 = __webpack_require__(/*! mongoose */ "mongoose");
-var getApplicationHealth = function () { return __awaiter(void 0, void 0, void 0, function () {
-    var today, start, status, duration, healthChecked;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
+exports.fetchPhotos = void 0;
+// src/handlers/photo/photoService.ts
+var axios_1 = __webpack_require__(/*! axios */ "axios");
+var photoModel_1 = __webpack_require__(/*! @/models/photoModel */ "./src/models/photoModel.ts");
+var fetchPhotos = function (searchTerm) { return __awaiter(void 0, void 0, void 0, function () {
+    var pixabayApiKey, unsplashApiKey, pexelsApiKey, pixabayResponse, unsplashResponse, pexelsResponse, error_1, errorMessages, pixabayPhotos, unsplashPhotos, pexelsPhotos, allPhotos;
+    var _a, _b;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
             case 0:
-                today = new Date();
-                start = Date.now();
-                return [4 /*yield*/, getMongoHealth()];
+                // Verifica se o searchTerm é fornecido
+                if (!searchTerm) {
+                    throw new Error('O parâmetro searchTerm é obrigatório.');
+                }
+                pixabayApiKey = '41685291-cdd48a139165d5ccd529db0aa';
+                unsplashApiKey = 'KTsEkLxeJany13vonWNtfflZICExHJ23ul2NRyEUum8';
+                pexelsApiKey = 'M4bAhUA8Vf3UVOg0by60snz7NpxmlE2vuTG5bomIrOAr2IJqx2RyLy57';
+                _c.label = 1;
             case 1:
-                status = _a.sent();
-                duration = Date.now() - start;
-                healthChecked = {
-                    name: package_1.name,
-                    version: package_1.version,
-                    status: true,
-                    date: "".concat(today.getDate(), "/").concat(today.getMonth(), "/").concat(today.getFullYear(), " ").concat(today.getHours(), ":").concat(today.getMinutes(), ":").concat(today.getSeconds()),
-                    duration: duration,
-                    integrations: {
-                        database: {
-                            name: 'database integration',
-                            id: 'db',
-                            status: status,
-                            response_time: "".concat(duration, " mls")
-                        }
-                    }
+                _c.trys.push([1, 5, , 6]);
+                return [4 /*yield*/, axios_1.default.get("https://pixabay.com/api/?key=".concat(pixabayApiKey, "&q=").concat(searchTerm))];
+            case 2:
+                // Use Axios para fazer chamadas às APIs
+                pixabayResponse = _c.sent();
+                return [4 /*yield*/, axios_1.default.get("https://api.unsplash.com/photos?client_id=".concat(unsplashApiKey, "&query=").concat(searchTerm))];
+            case 3:
+                unsplashResponse = _c.sent();
+                return [4 /*yield*/, axios_1.default.get("https://api.pexels.com/v1/search?query=".concat(searchTerm), {
+                        headers: { Authorization: pexelsApiKey },
+                    })];
+            case 4:
+                pexelsResponse = _c.sent();
+                return [3 /*break*/, 6];
+            case 5:
+                error_1 = _c.sent();
+                errorMessages = {
+                    pixabay: (((_a = error_1.response) === null || _a === void 0 ? void 0 : _a.data) || {}).message || 'Erro na chamada da API Pixabay.',
+                    unsplash: error_1.message || 'Erro na chamada da API Unsplash.',
+                    pexels: (((_b = error_1.response) === null || _b === void 0 ? void 0 : _b.data) || {}).message || 'Erro na chamada da API Pexels.',
                 };
-                return [2 /*return*/, healthChecked];
+                throw new Error("Erro ao buscar fotos: ".concat(errorMessages.pixabay, " | ").concat(errorMessages.unsplash, " | ").concat(errorMessages.pexels));
+            case 6:
+                pixabayPhotos = pixabayResponse.data.hits.map(function (hit) { return ({
+                    source: 'Pixabay',
+                    description: hit.tags,
+                    url: hit.webformatURL,
+                }); });
+                unsplashPhotos = unsplashResponse.data.map(function (photo) { return ({
+                    source: 'Unsplash',
+                    description: photo.alt_description,
+                    url: photo.urls.regular,
+                }); });
+                pexelsPhotos = pexelsResponse.data.photos.map(function (photo) { return ({
+                    source: 'Pexels',
+                    description: photo.url,
+                    url: photo.src.original,
+                }); });
+                allPhotos = __spreadArray(__spreadArray(__spreadArray([], __read(pixabayPhotos), false), __read(unsplashPhotos), false), __read(pexelsPhotos), false);
+                // Verificar se pelo menos uma API retornou fotos
+                if (allPhotos.length === 0) {
+                    throw new Error('Nenhuma foto encontrada.');
+                }
+                // Salvar as fotos no banco de dados
+                return [4 /*yield*/, photoModel_1.Photo.insertMany(allPhotos)];
+            case 7:
+                // Salvar as fotos no banco de dados
+                _c.sent();
+                return [2 /*return*/, allPhotos];
         }
     });
 }); };
-var getMongoHealth = function () { return __awaiter(void 0, void 0, void 0, function () {
-    return __generator(this, function (_a) {
-        return [2 /*return*/, mongoose_1.connection.readyState === 1 ? 'UP' : 'DOWN'];
-    });
-}); };
-var getHealthService = {
-    getApplicationHealth: getApplicationHealth
-};
-exports.getHealthService = getHealthService;
+exports.fetchPhotos = fetchPhotos;
 
 
 /***/ }),
@@ -1056,6 +1125,35 @@ var userService = {
     customAlphabet: nanoid_1.customAlphabet
 };
 exports.userService = userService;
+
+
+/***/ }),
+
+/***/ "./src/models/photoModel.ts":
+/*!**********************************!*\
+  !*** ./src/models/photoModel.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Photo = void 0;
+// src/models/photoModel.ts
+var mongoose_1 = __webpack_require__(/*! mongoose */ "mongoose");
+var photoSchema = new mongoose_1.Schema({
+    source: {
+        type: String,
+        required: true,
+    },
+    description: {
+        type: String,
+    },
+    url: {
+        type: String,
+        required: true,
+    },
+});
+exports.Photo = (0, mongoose_1.model)('Photo', photoSchema);
 
 
 /***/ }),
@@ -1577,6 +1675,16 @@ exports.CollectionsEnum = CollectionsEnum;
 
 /***/ }),
 
+/***/ "axios":
+/*!************************!*\
+  !*** external "axios" ***!
+  \************************/
+/***/ ((module) => {
+
+module.exports = require("axios");
+
+/***/ }),
+
 /***/ "crypto":
 /*!*************************!*\
   !*** external "crypto" ***!
@@ -1655,16 +1763,6 @@ module.exports = require("validator");
 
 module.exports = JSON.parse('{"MESSAGES":{"UPLOAD_FIELDS_REQUIRED":{"ptBr":"Type e fileName são parametros obrigatórios","en":"Type and fileName are required parameters","es":"Type y fileName son parámetros obligatorios"},"UPLOAD_FILE_NOT_SUPPORTED":{"ptBr":"Esse tipo de arquivo não é suportado","en":"This file type is not supported","es":"Este tipo de archivo no es compatible"},"SCHEMA_VALIDATION_ERROR":{"ptBr":"O campo {fieldName} é obrigatório","en":"The field {fieldName} is required","es":"El campo {fieldName} es obligatorio"},"UPDATE_VALIDATION_ERROR":{"ptBr":"Erro no campo {fieldName} com valor {value}","en":"Error in field {fieldName} with value {value}","es":"Error en el campo {fieldName} con valor {value}"},"NOT_AUTHORIZED_ERROR":{"ptBr":"Ação não autorizada, contate o suporte","en":"Unauthorized action, contact support","es":"Acción no autorizada, póngase en contacto con el servicio de asistencia"},"DEPENDENCY_FAILED":{"ptBr":"Algo deu errado, tente novamente em alguns segundos","en":"Something went wrong, try again in a few seconds","es":"Algo salió mal, inténtalo de nuevo en unos segundos"},"USER_NOT_SESSION_OWNER":{"ptBr":"Ação autorizada apenas para o dono da sessão","en":"Action allowed only to user session owner","es":"Acción autorizada solo para el propietario de la sesión"},"SOMETHING_WENT_WRONG_IN_GAME":{"ptBr":"Oops, algo deu errado... Tente novamente em alguns minutos ou contate o suporte","en":"Oops, something went wrong... Please try again in a few minutes or contact support","es":"Oops, algo salió mal... Vuelve a intentarlo en unos minutos o ponte en contacto con el servicio de asistencia."},"NOT_IMPLEMENTED":{"ptBr":"Oops, este recurso não foi implementado ou ainda não está disponível, dúvida fale com suporte!","en":"Oops, something went wrong... Please try again in a few minutes or contact support","es":"Oops, algo salió mal... Vuelve a intentarlo en unos minutos o ponte en contacto con el servicio de asistencia."},"NOT_HAS_PARTNER":{"ptBr":"Oops, seu usuário não está licenciado a nenhum parceiro de negócio, dúvida fale com suporte!","en":"Oops, your user is not licensed to any business partner, do not hesitate to contact support!","es":"Vaya, su usuario no tiene licencia para ningún socio comercial, ¡no dude en ponerse en contacto con el soporte!"},"INTERNAL_SERVER_ERROR":{"ptBr":"Erro interno do servidor, entre em contato com o suporte","en":"Internal server error, please contact support","es":"Error interno del servidor, póngase en contacto con soporte."}}}');
 
-/***/ }),
-
-/***/ "./package.json":
-/*!**********************!*\
-  !*** ./package.json ***!
-  \**********************/
-/***/ ((module) => {
-
-module.exports = JSON.parse('{"name":"api-tindin-base","version":"1.0.0","scripts":{"test":"NODE_ENV=test jest","start":"serverless offline --allowCache","audit":"npm audit --production","audit:fix":"npm audit fix --production","lint":"eslint .","tsc":"tsc","lint:fix":"eslint . --fix","lint:fixcache":"eslint . --fix --cache"},"standard":{"globals":["describe","beforeAll","test","jest","it","expect","afterAll","beforeEach","afterEach"]},"devDependencies":{"@types/aws-lambda":"^8.10.77","@types/crypto-js":"^4.0.1","@types/jest":"^26.0.23","@types/jsonwebtoken":"^8.5.4","@types/node":"^16.3.2","@typescript-eslint/eslint-plugin":"^4.26.1","aws-lambda":"^1.0.6","aws-sdk-mock":"^5.6.2","axios-mock-adapter":"^1.20.0","cache-loader":"^4.1.0","copy-webpack-plugin":"^9.0.1","eslint":"^7.28.0","eslint-config-standard-with-typescript":"^20.0.0","eslint-plugin-import":"^2.23.4","eslint-plugin-node":"^11.1.0","eslint-plugin-promise":"^4.3.1","fork-ts-checker-webpack-plugin":"^6.2.13","git-commit-msg-linter":"^3.2.8","husky":"^6.0.0","jest":"^27.0.4","jest-date":"^1.1.4","lint-staged":"^12.1.2","lite-server":"^2.6.1","lorem-ipsum":"^2.0.3","mockdate":"^3.0.5","mongodb-memory-server":"^6.9.6","serverless":"2.72.2","serverless-offline":"7.0.0","serverless-plugin-split-stacks":"1.11.3","serverless-prune-plugin":"1.6.1","serverless-webpack":"5.11.0","standard-version":"^9.3.0","ts-jest":"^27.0.3","ts-loader":"^9.2.4","ts-node":"^10.1.0","tsconfig-paths-webpack-plugin":"^3.5.1","typescript":"^4.3.5","webpack":"^5.80.0","webpack-node-externals":"^3.0.0"},"dependencies":{"axios":"^0.21.4","crypto":"^1.0.1","dotenv":"^10.0.0","express":"^4.18.2","jsonwebtoken":"^9.0.0","lambda-router":"^2.10.0","mkdirp":"^1.0.4","moment":"^2.29.4","mongodb":"^4.12.1","mongoose":"^6.5.1","mongoose-intl":"^3.3.0","nanoid":"^3.2.0","pino":"^6.12.0","pino-pretty":"^5.1.2","serverless-plugin-additional-stacks":"1.6.0","validator":"^13.7.0"},"license":"SEE LICENSE IN https://www.tindin.com.br/termos-de-uso","repository":{"type":"git","url":"https://github.com/TindinOficial/base-api-serverless"},"jest":{"testEnvironment":"node"}}');
-
 /***/ })
 
 /******/ 	});
@@ -1698,16 +1796,17 @@ var __webpack_exports__ = {};
 // This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
 (() => {
 var exports = __webpack_exports__;
-/*!*********************************************!*\
-  !*** ./src/handlers/healthCheck/handler.ts ***!
-  \*********************************************/
+/*!***************************************!*\
+  !*** ./src/handlers/photo/handler.ts ***!
+  \***************************************/
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.main = void 0;
-var getHealthCheck_1 = __webpack_require__(/*! ./getHealthCheck */ "./src/handlers/healthCheck/getHealthCheck.ts");
+// src/handlers/photo/handler.ts
 var router_1 = __webpack_require__(/*! @/lib/router */ "./lib/router.ts");
+var getPhotos_1 = __webpack_require__(/*! ./getPhotos */ "./src/handlers/photo/getPhotos.ts");
 var router = (0, router_1.buildRouter)();
-router.get('/health-check', getHealthCheck_1.getHealthCheck);
+router.get('/contents/photos', getPhotos_1.getPhotos);
 var main = (0, router_1.buildHandler)(router);
 exports.main = main;
 

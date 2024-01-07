@@ -48,6 +48,7 @@ functions:
   apps: ${file(src/handlers/apps/service.yml)}
   client: ${file(src/handlers/client/service.yml)}
   aulas: ${file(src/handlers/aulas/service.yml)}
+  photo: ${file(src/handlers/photo/service.yml)}
 
 plugins:
   - serverless-webpack

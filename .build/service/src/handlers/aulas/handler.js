@@ -1277,7 +1277,7 @@ var saveProgressHandler = function (_a) {
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
-                    _b.trys.push([0, 3, , 4]);
+                    _b.trys.push([0, 5, , 6]);
                     aulaId = pathParameters.aulaId;
                     progress = body.progress, performance = body.performance;
                     // Verifique se aulaId, progress e performance estão presentes
@@ -1287,18 +1287,17 @@ var saveProgressHandler = function (_a) {
                     return [4 /*yield*/, (0, aulaService_1.getAula)(aulaId)];
                 case 1:
                     aulaAtual = _b.sent();
-                    // Verifique se a aula não é nula e se já está finalizada
-                    if (aulaAtual !== null && progress === 100) {
-                        throw new Error('Aula já finalizada, não é possível atualizar o progresso.');
-                    }
-                    return [4 /*yield*/, (0, aulaService_1.saveProgress)(user._id, aulaId, progress, performance)];
-                case 2:
+                    if (!(aulaAtual !== null && progress === 100)) return [3 /*break*/, 2];
+                    throw new Error('Aula já finalizada, não é possível atualizar o progresso.');
+                case 2: return [4 /*yield*/, (0, aulaService_1.saveProgress)(user._id, aulaId, progress, performance)];
+                case 3:
                     aula = _b.sent();
                     return [2 /*return*/, { aula: aula }];
-                case 3:
+                case 4: return [3 /*break*/, 6];
+                case 5:
                     error_1 = _b.sent();
                     return [2 /*return*/, { error: error_1.message }];
-                case 4: return [2 /*return*/];
+                case 6: return [2 /*return*/];
             }
         });
     });
