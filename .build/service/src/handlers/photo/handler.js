@@ -779,7 +779,6 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getPhotos = void 0;
-// src/handlers/photo/getPhotos.ts
 var photoService_1 = __webpack_require__(/*! ./photoService */ "./src/handlers/photo/photoService.ts");
 var getPhotos = function (request, h) { return __awaiter(void 0, void 0, void 0, function () {
     var search, photos, error_1;
@@ -788,7 +787,7 @@ var getPhotos = function (request, h) { return __awaiter(void 0, void 0, void 0,
             case 0:
                 search = request.query.search;
                 if (!search) {
-                    return [2 /*return*/, { error: 'O parâmetro de pesquisa é obrigatório' }];
+                    return [2 /*return*/, { error: 'O parâmetro de pesquisa é obrigatório (query param: search)' }];
                 }
                 _a.label = 1;
             case 1:
@@ -880,7 +879,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.fetchPhotos = void 0;
-// src/handlers/photo/photoService.ts
 var axios_1 = __webpack_require__(/*! axios */ "axios");
 var photoModel_1 = __webpack_require__(/*! @/models/photoModel */ "./src/models/photoModel.ts");
 var fetchPhotos = function (searchTerm) { return __awaiter(void 0, void 0, void 0, function () {
@@ -889,9 +887,8 @@ var fetchPhotos = function (searchTerm) { return __awaiter(void 0, void 0, void 
     return __generator(this, function (_c) {
         switch (_c.label) {
             case 0:
-                // Verifica se o searchTerm é fornecido
                 if (!searchTerm) {
-                    throw new Error('O parâmetro searchTerm é obrigatório.');
+                    throw new Error('É necessário informar um termo de busca (search).');
                 }
                 pixabayApiKey = '41685291-cdd48a139165d5ccd529db0aa';
                 unsplashApiKey = 'KTsEkLxeJany13vonWNtfflZICExHJ23ul2NRyEUum8';
@@ -901,7 +898,6 @@ var fetchPhotos = function (searchTerm) { return __awaiter(void 0, void 0, void 
                 _c.trys.push([1, 5, , 6]);
                 return [4 /*yield*/, axios_1.default.get("https://pixabay.com/api/?key=".concat(pixabayApiKey, "&q=").concat(searchTerm))];
             case 2:
-                // Use Axios para fazer chamadas às APIs
                 pixabayResponse = _c.sent();
                 return [4 /*yield*/, axios_1.default.get("https://api.unsplash.com/photos?client_id=".concat(unsplashApiKey, "&query=").concat(searchTerm))];
             case 3:
@@ -937,14 +933,11 @@ var fetchPhotos = function (searchTerm) { return __awaiter(void 0, void 0, void 
                     url: photo.src.original,
                 }); });
                 allPhotos = __spreadArray(__spreadArray(__spreadArray([], __read(pixabayPhotos), false), __read(unsplashPhotos), false), __read(pexelsPhotos), false);
-                // Verificar se pelo menos uma API retornou fotos
                 if (allPhotos.length === 0) {
                     throw new Error('Nenhuma foto encontrada.');
                 }
-                // Salvar as fotos no banco de dados
                 return [4 /*yield*/, photoModel_1.Photo.insertMany(allPhotos)];
             case 7:
-                // Salvar as fotos no banco de dados
                 _c.sent();
                 return [2 /*return*/, allPhotos];
         }
@@ -1802,11 +1795,11 @@ var exports = __webpack_exports__;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.main = void 0;
-// src/handlers/photo/handler.ts
 var router_1 = __webpack_require__(/*! @/lib/router */ "./lib/router.ts");
 var getPhotos_1 = __webpack_require__(/*! ./getPhotos */ "./src/handlers/photo/getPhotos.ts");
+var auth_1 = __webpack_require__(/*! @/lib/auth */ "./lib/auth.ts");
 var router = (0, router_1.buildRouter)();
-router.get('/contents/photos', getPhotos_1.getPhotos);
+router.get('/contents/photos', auth_1.auth.verifyLogged(getPhotos_1.getPhotos));
 var main = (0, router_1.buildHandler)(router);
 exports.main = main;
 

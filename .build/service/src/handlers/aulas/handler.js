@@ -790,25 +790,24 @@ var __rest = (this && this.__rest) || function (s, e) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.saveProgress = exports.updateAula = exports.listAulas = exports.getAula = exports.deleteAula = exports.createAula = exports.main = void 0;
-var saveProgress_1 = __webpack_require__(/*! ./saveProgress */ "./src/handlers/aulas/saveProgress.ts"); // Importe o novo handler
-var auth_1 = __webpack_require__(/*! @/lib/auth */ "./lib/auth.ts"); // Importe o módulo de autenticação
+var saveProgress_1 = __webpack_require__(/*! ./saveProgress */ "./src/handlers/aulas/saveProgress.ts");
+var auth_1 = __webpack_require__(/*! @/lib/auth */ "./lib/auth.ts");
 var router_1 = __webpack_require__(/*! @/lib/router */ "./lib/router.ts");
 var createAula_1 = __webpack_require__(/*! ./createAula */ "./src/handlers/aulas/createAula.ts");
 var deleteAula_1 = __webpack_require__(/*! ./deleteAula */ "./src/handlers/aulas/deleteAula.ts");
 var getAula_1 = __webpack_require__(/*! ./getAula */ "./src/handlers/aulas/getAula.ts");
 var listAulas_1 = __webpack_require__(/*! ./listAulas */ "./src/handlers/aulas/listAulas.ts");
 var updateAula_1 = __webpack_require__(/*! ./updateAula */ "./src/handlers/aulas/updateAula.ts");
+var aulaModel_1 = __webpack_require__(/*! @/models/aulaModel */ "./src/models/aulaModel.ts");
 var router = (0, router_1.buildRouter)();
 router.post('/aulas', auth_1.auth.verifyLogged(createAula_1.createAulaHandler));
 router.get('/aulas/{aulaId}', auth_1.auth.verifyLogged(getAula_1.getAulaHandler));
 router.put('/aulas', auth_1.auth.verifyLogged(updateAula_1.updateAulaHandler));
 router.get('/aulas', auth_1.auth.verifyLogged(listAulas_1.listAulasHandler));
 router.delete('/aulas/{aulaId}', auth_1.auth.verifyLogged(deleteAula_1.deleteAulaHandler));
-// Adicione a nova rota para salvar progresso
 router.post('/aulas/{aulaId}/mine', auth_1.auth.verifyLogged(saveProgress_1.saveProgressHandler));
 var main = (0, router_1.buildHandler)(router);
 exports.main = main;
-var aulaModel_1 = __webpack_require__(/*! @/models/aulaModel */ "./src/models/aulaModel.ts");
 var createAula = function (data) { return __awaiter(void 0, void 0, void 0, function () {
     var novaAula;
     return __generator(this, function (_a) {
@@ -862,6 +861,16 @@ var listAulas = function (filtro) {
                     if (filtro.temVideo !== undefined) {
                         query.urlVideo = { $exists: filtro.temVideo };
                     }
+                    // Adicione condições para filtrar por conclusão, progresso mínimo e performance máxima
+                    if (filtro.concluido !== undefined) {
+                        query['progressPorUsuario.progress'] = filtro.concluido ? 100 : { $lt: 100 };
+                    }
+                    if (filtro.progressoMin !== undefined) {
+                        query['progressPorUsuario.progress'] = { $gte: filtro.progressoMin };
+                    }
+                    if (filtro.performanceMax !== undefined) {
+                        query['progressPorUsuario.performance'] = { $lte: filtro.performanceMax };
+                    }
                     return [4 /*yield*/, aulaModel_1.Aula.find(query)];
                 case 1:
                     aulas = _a.sent();
@@ -886,7 +895,7 @@ var updateAula = function (data) { return __awaiter(void 0, void 0, void 0, func
 }); };
 exports.updateAula = updateAula;
 var saveProgress = function (userId, aulaId, progress, performance) { return __awaiter(void 0, void 0, void 0, function () {
-    var aula, ultimoProgresso;
+    var aula, userProgress, userProgressIndex, totalFinalizados, totalUsuarios, mediaPerformance;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, aulaModel_1.Aula.findById(aulaId)];
@@ -895,26 +904,23 @@ var saveProgress = function (userId, aulaId, progress, performance) { return __a
                 if (!aula) {
                     throw new Error('Aula não encontrada');
                 }
-                // Verificar se existem progressos antigos
-                if (aula.progressPorUsuario.length > 0) {
-                    ultimoProgresso = aula.progressPorUsuario[aula.progressPorUsuario.length - 1];
-                    // Verificar se o último progresso ou a performance são diferentes
-                    if (ultimoProgresso.progress !== progress || ultimoProgresso.performance !== performance) {
-                        // Remover todos os progressos antigos
-                        aula.progressPorUsuario.forEach(function (element) {
-                            if (element.userId.toString() === userId.toString()) {
-                                element.remove();
-                            }
-                        });
-                        // Adicionar o novo progresso
-                        aula.progressPorUsuario.push({ userId: userId, progress: progress, performance: performance });
-                    }
-                    // Se forem iguais, não faz nada
+                userProgress = aula.progressPorUsuario.find(function (element) { return element.userId.toString() === userId.toString(); });
+                if (userProgress && userProgress.progress === 100) {
+                    throw new Error('Aula já finalizada para este usuário, não é mais possível atualizar o progresso.');
+                }
+                userProgressIndex = aula.progressPorUsuario.findIndex(function (element) { return element.userId.toString() === userId.toString(); });
+                if (userProgressIndex !== -1) {
+                    aula.progressPorUsuario[userProgressIndex].progress = progress;
+                    aula.progressPorUsuario[userProgressIndex].performance = performance;
                 }
                 else {
-                    // Crie um novo progresso para o usuário
                     aula.progressPorUsuario.push({ userId: userId, progress: progress, performance: performance });
                 }
+                totalFinalizados = aula.progressPorUsuario.filter(function (element) { return element.progress === 100; }).length;
+                totalUsuarios = aula.progressPorUsuario.length;
+                mediaPerformance = totalUsuarios > 0 ? aula.progressPorUsuario.reduce(function (acc, curr) { return acc + curr.performance; }, 0) / totalUsuarios : 0;
+                aula.finalizados = totalFinalizados;
+                aula.mediaPerformance = mediaPerformance;
                 return [4 /*yield*/, aula.save()];
             case 2:
                 _a.sent();
@@ -1142,6 +1148,95 @@ exports.getAulaHandler = getAulaHandler;
 
 /***/ }),
 
+/***/ "./src/handlers/aulas/getIndicators.ts":
+/*!*********************************************!*\
+  !*** ./src/handlers/aulas/getIndicators.ts ***!
+  \*********************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getIndicators = void 0;
+var aulaModel_1 = __webpack_require__(/*! @/models/aulaModel */ "./src/models/aulaModel.ts");
+var getIndicators = function (request, h) { return __awaiter(void 0, void 0, void 0, function () {
+    var orderBy, sortOption, aulas, indicators, error_1;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                orderBy = request.query.orderBy;
+                sortOption = {};
+                if (orderBy) {
+                    if (orderBy === 'performance') {
+                        sortOption = { mediaPerformance: -1 };
+                    }
+                    else if (orderBy === 'totalFinalizados') {
+                        sortOption = { finalizados: -1 };
+                    }
+                }
+                return [4 /*yield*/, aulaModel_1.Aula.find().sort(sortOption)];
+            case 1:
+                aulas = _a.sent();
+                indicators = aulas.map(function (aula) {
+                    var totalFinalizados = aula.finalizados;
+                    var mediaPerformance = aula.mediaPerformance;
+                    return {
+                        aulaId: aula._id,
+                        nome: aula.titulo,
+                        totalFinalizados: totalFinalizados,
+                        mediaPerformance: mediaPerformance,
+                    };
+                });
+                return [2 /*return*/, indicators];
+            case 2:
+                error_1 = _a.sent();
+                console.error('Erro ao buscar indicadores de aulas:', error_1);
+                return [2 /*return*/, h.response({ error: 'Erro ao buscar indicadores de aulas' }).code(500)];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); };
+exports.getIndicators = getIndicators;
+
+
+/***/ }),
+
 /***/ "./src/handlers/aulas/listAulas.ts":
 /*!*****************************************!*\
   !*** ./src/handlers/aulas/listAulas.ts ***!
@@ -1210,16 +1305,6 @@ var listAulasHandler = function (_a) {
     });
 };
 exports.listAulasHandler = listAulasHandler;
-// import { listAulas } from './aulaService';
-// const listAulasHandler = async () => {
-//   try {
-//     const aulas = await listAulas();
-//     return { aulas };
-//   } catch (error) {
-//     return { error: error.message };
-//   }
-// };
-// export { listAulasHandler };
 
 
 /***/ }),
@@ -1277,27 +1362,23 @@ var saveProgressHandler = function (_a) {
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
-                    _b.trys.push([0, 5, , 6]);
+                    _b.trys.push([0, 3, , 4]);
                     aulaId = pathParameters.aulaId;
                     progress = body.progress, performance = body.performance;
-                    // Verifique se aulaId, progress e performance estão presentes
                     if (!aulaId || !progress || !performance) {
                         throw new Error('Parâmetros inválidos');
                     }
                     return [4 /*yield*/, (0, aulaService_1.getAula)(aulaId)];
                 case 1:
                     aulaAtual = _b.sent();
-                    if (!(aulaAtual !== null && progress === 100)) return [3 /*break*/, 2];
-                    throw new Error('Aula já finalizada, não é possível atualizar o progresso.');
-                case 2: return [4 /*yield*/, (0, aulaService_1.saveProgress)(user._id, aulaId, progress, performance)];
-                case 3:
+                    return [4 /*yield*/, (0, aulaService_1.saveProgress)(user._id, aulaId, progress, performance)];
+                case 2:
                     aula = _b.sent();
                     return [2 /*return*/, { aula: aula }];
-                case 4: return [3 /*break*/, 6];
-                case 5:
+                case 3:
                     error_1 = _b.sent();
                     return [2 /*return*/, { error: error_1.message }];
-                case 6: return [2 /*return*/];
+                case 4: return [2 /*return*/];
             }
         });
     });
@@ -1561,8 +1642,8 @@ exports.userService = userService;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Aula = void 0;
-// aulaModel.ts
 var mongoose_1 = __webpack_require__(/*! mongoose */ "mongoose");
+// Schema de Progresso
 var progressSchema = new mongoose_1.Schema({
     userId: {
         type: mongoose_1.Schema.Types.ObjectId,
@@ -1582,6 +1663,7 @@ var progressSchema = new mongoose_1.Schema({
         max: 100,
     },
 });
+// Schema de Aula
 var aulaSchema = new mongoose_1.Schema({
     titulo: {
         type: String,
@@ -1601,7 +1683,17 @@ var aulaSchema = new mongoose_1.Schema({
     urlArquivoComplementar: {
         type: String,
     },
-    progressPorUsuario: [progressSchema], // Adicione um array para armazenar o progresso por usuário
+    finalizados: {
+        type: Number,
+        default: 0,
+    },
+    mediaPerformance: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 100,
+    },
+    progressPorUsuario: [progressSchema],
 });
 exports.Aula = (0, mongoose_1.model)('Aula', aulaSchema);
 
@@ -2242,22 +2334,23 @@ var exports = __webpack_exports__;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.main = void 0;
-var saveProgress_1 = __webpack_require__(/*! ./saveProgress */ "./src/handlers/aulas/saveProgress.ts"); // Importe o novo handler
-var auth_1 = __webpack_require__(/*! @/lib/auth */ "./lib/auth.ts"); // Importe o módulo de autenticação
+var saveProgress_1 = __webpack_require__(/*! ./saveProgress */ "./src/handlers/aulas/saveProgress.ts");
+var auth_1 = __webpack_require__(/*! @/lib/auth */ "./lib/auth.ts");
 var router_1 = __webpack_require__(/*! @/lib/router */ "./lib/router.ts");
 var createAula_1 = __webpack_require__(/*! ./createAula */ "./src/handlers/aulas/createAula.ts");
 var deleteAula_1 = __webpack_require__(/*! ./deleteAula */ "./src/handlers/aulas/deleteAula.ts");
 var getAula_1 = __webpack_require__(/*! ./getAula */ "./src/handlers/aulas/getAula.ts");
 var listAulas_1 = __webpack_require__(/*! ./listAulas */ "./src/handlers/aulas/listAulas.ts");
 var updateAula_1 = __webpack_require__(/*! ./updateAula */ "./src/handlers/aulas/updateAula.ts");
+var getIndicators_1 = __webpack_require__(/*! ./getIndicators */ "./src/handlers/aulas/getIndicators.ts");
 var router = (0, router_1.buildRouter)();
 router.post('/aulas', auth_1.auth.verifyLogged(createAula_1.createAulaHandler));
 router.get('/aulas/{aulaId}', auth_1.auth.verifyLogged(getAula_1.getAulaHandler));
 router.put('/aulas', auth_1.auth.verifyLogged(updateAula_1.updateAulaHandler));
 router.get('/aulas', auth_1.auth.verifyLogged(listAulas_1.listAulasHandler));
 router.delete('/aulas/{aulaId}', auth_1.auth.verifyLogged(deleteAula_1.deleteAulaHandler));
-// Adicione a nova rota para salvar progresso
 router.post('/aulas/{aulaId}/mine', auth_1.auth.verifyLogged(saveProgress_1.saveProgressHandler));
+router.get('/aulas/indicators', auth_1.auth.verifyLogged(getIndicators_1.getIndicators));
 var main = (0, router_1.buildHandler)(router);
 exports.main = main;
 

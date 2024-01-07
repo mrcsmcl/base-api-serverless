@@ -1,11 +1,9 @@
-// src/handlers/photo/photoService.ts
 import axios, { AxiosResponse } from 'axios';
 import { Photo } from '@/models/photoModel';
 
 const fetchPhotos = async (searchTerm: string) => {
-  // Verifica se o searchTerm é fornecido
   if (!searchTerm) {
-    throw new Error('O parâmetro searchTerm é obrigatório.');
+    throw new Error('É necessário informar um termo de busca (search).');
   }
 
   const pixabayApiKey = '41685291-cdd48a139165d5ccd529db0aa';
@@ -17,14 +15,12 @@ const fetchPhotos = async (searchTerm: string) => {
   let pexelsResponse: AxiosResponse;
 
   try {
-    // Use Axios para fazer chamadas às APIs
     pixabayResponse = await axios.get(`https://pixabay.com/api/?key=${pixabayApiKey}&q=${searchTerm}`);
     unsplashResponse = await axios.get(`https://api.unsplash.com/photos?client_id=${unsplashApiKey}&query=${searchTerm}`);
     pexelsResponse = await axios.get(`https://api.pexels.com/v1/search?query=${searchTerm}`, {
       headers: { Authorization: pexelsApiKey },
     });
   } catch (error) {
-    // Lidar com erros durante as chamadas da API
     const errorMessages = {
       pixabay: (error.response?.data || {}).message || 'Erro na chamada da API Pixabay.',
       unsplash: error.message || 'Erro na chamada da API Unsplash.',
@@ -33,7 +29,6 @@ const fetchPhotos = async (searchTerm: string) => {
     throw new Error(`Erro ao buscar fotos: ${errorMessages.pixabay} | ${errorMessages.unsplash} | ${errorMessages.pexels}`);
   }
 
-  // Extrair dados relevantes da resposta e armazenar no banco de dados
   const pixabayPhotos = pixabayResponse.data.hits.map((hit: any) => ({
     source: 'Pixabay',
     description: hit.tags,
@@ -54,12 +49,10 @@ const fetchPhotos = async (searchTerm: string) => {
 
   const allPhotos = [...pixabayPhotos, ...unsplashPhotos, ...pexelsPhotos];
 
-  // Verificar se pelo menos uma API retornou fotos
   if (allPhotos.length === 0) {
     throw new Error('Nenhuma foto encontrada.');
   }
 
-  // Salvar as fotos no banco de dados
   await Photo.insertMany(allPhotos);
 
   return allPhotos;

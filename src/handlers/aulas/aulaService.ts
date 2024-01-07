@@ -1,12 +1,13 @@
-import { saveProgressHandler } from './saveProgress';  // Importe o novo handler
-import { auth } from '@/lib/auth';  // Importe o módulo de autenticação
-import mongoose from 'mongoose';
+import { saveProgressHandler } from './saveProgress';
+import { auth } from '@/lib/auth';
 import { buildRouter, buildHandler } from '@/lib/router';
 import { createAulaHandler } from './createAula';
 import { deleteAulaHandler } from './deleteAula';
 import { getAulaHandler } from './getAula';
 import { listAulasHandler } from './listAulas';
 import { updateAulaHandler } from './updateAula';
+import { Aula } from '@/models/aulaModel';
+import { ICreateAula, IUpdateAula } from '@/types/IAula';
 
 const router = buildRouter();
 
@@ -15,16 +16,11 @@ router.get('/aulas/{aulaId}', auth.verifyLogged(getAulaHandler));
 router.put('/aulas', auth.verifyLogged(updateAulaHandler));
 router.get('/aulas', auth.verifyLogged(listAulasHandler));
 router.delete('/aulas/{aulaId}', auth.verifyLogged(deleteAulaHandler));
-
-// Adicione a nova rota para salvar progresso
 router.post('/aulas/{aulaId}/mine', auth.verifyLogged(saveProgressHandler));
 
 const main = buildHandler(router);
 
 export { main };
-
-import { Aula } from '@/models/aulaModel';
-import { ICreateAula, IUpdateAula } from '@/types/IAula';
 
 const createAula = async (data: ICreateAula) => {
   const novaAula = await Aula.create(data);
@@ -41,7 +37,14 @@ const getAula = async (aulaId: string) => {
   return aula;
 };
 
-const listAulas = async (filtro: { titulo?: string; descricao?: string; temVideo?: boolean } = {}) => {
+const listAulas = async (filtro: {
+  titulo?: string;
+  descricao?: string;
+  temVideo?: boolean;
+  concluido?: boolean;
+  progressoMin?: number;
+  performanceMax?: number;
+} = {}) => {
   const query: any = {};
 
   if (filtro.titulo) {
@@ -56,9 +59,23 @@ const listAulas = async (filtro: { titulo?: string; descricao?: string; temVideo
     query.urlVideo = { $exists: filtro.temVideo };
   }
 
+  // Adicione condições para filtrar por conclusão, progresso mínimo e performance máxima
+  if (filtro.concluido !== undefined) {
+    query['progressPorUsuario.progress'] = filtro.concluido ? 100 : { $lt: 100 };
+  }
+
+  if (filtro.progressoMin !== undefined) {
+    query['progressPorUsuario.progress'] = { $gte: filtro.progressoMin };
+  }
+
+  if (filtro.performanceMax !== undefined) {
+    query['progressPorUsuario.performance'] = { $lte: filtro.performanceMax };
+  }
+
   const aulas = await Aula.find(query);
   return aulas;
 };
+
 
 const updateAula = async (data: IUpdateAula) => {
   const { aulaId, ...atualizacoes } = data;
@@ -77,36 +94,31 @@ const saveProgress = async (userId: string, aulaId: string, progress: number, pe
     throw new Error('Aula não encontrada');
   }
 
-  // Verificar se existem progressos antigos
-  if (aula.progressPorUsuario.length > 0) {
-    // Pegar o último progresso
-    const ultimoProgresso = aula.progressPorUsuario[aula.progressPorUsuario.length - 1];
+  const userProgress = aula.progressPorUsuario.find((element) => element.userId.toString() === userId.toString());
 
-    // Verificar se o último progresso ou a performance são diferentes
-    if (ultimoProgresso.progress !== progress || ultimoProgresso.performance !== performance) {
-      // Remover todos os progressos antigos
-      aula.progressPorUsuario.forEach(element => {
-        if (element.userId.toString() === userId.toString()) {
-          element.remove();
-        }
-      });
-      
-      // Adicionar o novo progresso
-      aula.progressPorUsuario.push({ userId, progress, performance });
-    }
-    // Se forem iguais, não faz nada
+  if (userProgress && userProgress.progress === 100) {
+    throw new Error('Aula já finalizada para este usuário, não é mais possível atualizar o progresso.');
+  }
+
+  const userProgressIndex = aula.progressPorUsuario.findIndex((element) => element.userId.toString() === userId.toString());
+
+  if (userProgressIndex !== -1) {
+    aula.progressPorUsuario[userProgressIndex].progress = progress;
+    aula.progressPorUsuario[userProgressIndex].performance = performance;
   } else {
-    // Crie um novo progresso para o usuário
     aula.progressPorUsuario.push({ userId, progress, performance });
   }
+
+  const totalFinalizados = aula.progressPorUsuario.filter((element) => element.progress === 100).length;
+  const totalUsuarios = aula.progressPorUsuario.length;
+  const mediaPerformance = totalUsuarios > 0 ? aula.progressPorUsuario.reduce((acc, curr) => acc + curr.performance, 0) / totalUsuarios : 0;
+
+  aula.finalizados = totalFinalizados;
+  aula.mediaPerformance = mediaPerformance;
 
   await aula.save();
   return aula;
 };
-
-
-
-
 
 export { createAula, deleteAula, getAula, listAulas, updateAula, saveProgress };
 

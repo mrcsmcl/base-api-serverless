@@ -1,10 +1,11 @@
-// aulaModel.ts
 import { Schema, model } from 'mongoose';
+
+// Schema de Progresso
 
 const progressSchema = new Schema({
   userId: {
     type: Schema.Types.ObjectId,
-    ref: 'User', // Certifique-se de ajustar se o modelo de usuário tiver um nome diferente
+    ref: 'User',
     required: true,
   },
   progress: {
@@ -20,6 +21,8 @@ const progressSchema = new Schema({
     max: 100,
   },
 });
+
+// Schema de Aula
 
 const aulaSchema = new Schema({
   titulo: {
@@ -40,7 +43,17 @@ const aulaSchema = new Schema({
   urlArquivoComplementar: {
     type: String,
   },
-  progressPorUsuario: [progressSchema], // Adicione um array para armazenar o progresso por usuário
+  finalizados: {
+    type: Number,
+    default: 0,
+  },
+  mediaPerformance: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100,
+  },
+  progressPorUsuario: [progressSchema],
 });
 
 export const Aula = model('Aula', aulaSchema);
